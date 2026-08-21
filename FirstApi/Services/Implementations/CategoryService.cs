@@ -1,4 +1,7 @@
 ﻿
+using FirstApi.Utilities;
+using FirstApi.Utilities.Exceptions;
+
 namespace FirstApi.Services.Implementations
 {
     public class CategoryService
@@ -34,6 +37,13 @@ namespace FirstApi.Services.Implementations
         }
         public async Task CreateAsync(PostCategoryDto categoryDto)
         {
+            bool result = await _context.Categories.AnyAsync(c => c.Name == categoryDto.Name);
+
+            if(result)
+            {
+                throw new CategoryAlreadyExistException(categoryDto.Name);
+            }
+
             Category category = new Category
             {
                 Name = categoryDto.Name
@@ -43,7 +53,12 @@ namespace FirstApi.Services.Implementations
         }
         public async Task UpdateAsync(int? id, PostCategoryDto categoryDto)
         {
-           
+            bool result = await _context.Categories.AnyAsync(c => c.Name == categoryDto.Name || c.Id != id);
+
+            if (result)
+            {
+                throw new CategoryAlreadyExistException(categoryDto.Name);
+            }
 
             Category? existed = await _getCategoryAsync(id);
 
@@ -60,11 +75,12 @@ namespace FirstApi.Services.Implementations
 
         private async Task<Category> _getCategoryAsync(int? id)
         {
-            if (id is null || id < 1) throw new Exception("Bad Request");
+            if (id is null || id < 1) throw new Exception("id is not correctBad request");
 
-            Category? category = await _context.Categories.FirstOrDefaultAsync(c => c.Id == id);
-
-            if (category == null) throw new Exception("Not Found");
+            Category? category = await _context.Categories
+                .Include(c => c.Products)
+                .FirstOrDefaultAsync(c => c.Id == id) ?? 
+                throw new NotFoundException(nameof(Category), id);
 
             return category;
         }

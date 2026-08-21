@@ -1,5 +1,7 @@
 ﻿
 
+using FirstApi.Utilities.Exceptions;
+
 namespace FirstApi.Controllers
 {
     [Route("api/[controller]")]
@@ -24,7 +26,25 @@ namespace FirstApi.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> Get(int? id)
         {
-            return Ok(await _categoryService.GetByIdAsync(id));
+            GetCategoryDto categoryDto;
+
+            try
+            {
+                categoryDto = await _categoryService.GetByIdAsync(id);
+            }
+            catch (Utilities.Exceptions.ApplicationException e)
+            {
+                ErrorResponse error = new(e.ErrorCode, e.StatusCode, e.Message);
+                return StatusCode(StatusCodes.Status404NotFound, error);
+            }
+          
+            catch (Exception e)
+            {
+                ErrorResponse error = new("INTERNAL_SERVER_ERROR", StatusCodes.Status500InternalServerError, "Internal server error ");
+                return StatusCode(StatusCodes.Status500InternalServerError, error);
+            }
+
+            return Ok(categoryDto);
         }
         [HttpPost]
         public async Task<IActionResult> Create([FromForm]PostCategoryDto categoryDto)
